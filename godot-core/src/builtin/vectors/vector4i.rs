@@ -87,7 +87,7 @@ impl Vector4i {
 
     #[doc(hidden)]
     #[inline]
-    pub fn as_inner(&self) -> inner::InnerVector4i<'_> {
+    pub fn as_inner(&self) -> inner::InnerVector4i {
         inner::InnerVector4i::from_outer(self)
     }
 }

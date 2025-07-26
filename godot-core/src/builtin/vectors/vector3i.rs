@@ -83,7 +83,7 @@ impl Vector3i {
 
     #[doc(hidden)]
     #[inline]
-    pub fn as_inner(&self) -> inner::InnerVector3i<'_> {
+    pub fn as_inner(&self) -> inner::InnerVector3i {
         inner::InnerVector3i::from_outer(self)
     }
 }

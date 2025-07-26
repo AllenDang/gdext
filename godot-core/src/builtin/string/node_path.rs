@@ -180,7 +180,7 @@ impl NodePath {
     }
 
     #[doc(hidden)]
-    pub fn as_inner(&self) -> inner::InnerNodePath<'_> {
+    pub fn as_inner(&self) -> inner::InnerNodePath {
         inner::InnerNodePath::from_outer(self)
     }
 }
