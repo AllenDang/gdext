@@ -248,19 +248,109 @@ impl std::error::Error for TaskSpawnError {}
 // ----------------------------------------------------------------------------------------------------------------------------------------------
 // Public interface
 
-#[doc(alias = "async")]
-pub fn spawn(future: impl Future<Output = ()> + 'static) -> TaskHandle {
-    // Spawning new tasks is only allowed on the main thread for now.
-    // We can not accept Sync + Send futures since all object references (i.e. Gd<T>) are not thread-safe. So a future has to remain on the
-    // same thread it was created on. Godots signals on the other hand can be emitted on any thread, so it can't be guaranteed on which thread
-    // a future will be polled.
-    // By limiting async tasks to the main thread we can redirect all signal callbacks back to the main thread via `call_deferred`.
-    //
-    // Once thread-safe futures are possible the restriction can be lifted.
-    assert!(
-        crate::init::is_main_thread(),
-        "godot_task() can only be used on the main thread"
-    );
+/// Create a new async background task that doesn't require Send.
+///
+/// This function is similar to [`spawn`] but allows futures that contain non-Send types
+/// like Godot objects (`Gd<T>`, `Signal`, etc.). The future will be polled on the main thread
+/// where it was created.
+///
+/// This is the preferred function for futures that interact with Godot objects, since most
+/// Godot types are not thread-safe and don't implement Send.
+///
+/// # Thread Safety
+///
+/// This function must be called from the main thread in both single-threaded and multi-threaded modes.
+/// The future will always be polled on the main thread to ensure compatibility with Godot's threading model.
+///
+/// # Panics
+///
+/// Panics if:
+/// - No async runtime has been registered
+/// - The task queue is full and cannot accept more tasks
+/// - Called from a non-main thread
+///
+/// # Examples
+/// ```rust,no_run
+/// use godot::prelude::*;
+/// use godot::classes::RefCounted;
+/// use godot_core::task::spawn_async_func;
+/// use godot_core::obj::NewGd;
+///
+/// let object = RefCounted::new_gd();
+/// let signal = Signal::from_object_signal(&object, "some_signal");
+///
+/// // Create a signal holder for the async function
+/// let mut signal_holder = RefCounted::new_gd();
+/// signal_holder.add_user_signal("finished");
+///
+/// spawn_async_func(signal_holder, async move {
+///     signal.to_future::<()>().await;
+///     println!("Signal received!");
+/// });
+/// ```
+/// Unified function for spawning async functions (main public API).
+///
+/// This is the primary function used by the `#[async_func]` macro. It handles both void
+/// and non-void async functions by automatically detecting the return type and using
+/// the appropriate signal emission strategy.
+///
+/// # Arguments
+///
+/// * `signal_emitter` - The RefCounted object that will emit the "finished" signal
+/// * `future` - The async function to execute
+///
+/// # Thread Safety
+///
+/// This function must be called from the main thread and the future will be polled
+/// on the main thread, ensuring compatibility with Godot's threading model.
+///
+/// # Panics
+///
+/// Panics if:
+/// - No async runtime has been registered
+/// - The task queue is full and cannot accept more tasks
+/// - Called from a non-main thread
+///
+/// # Examples
+///
+/// For non-void functions:
+/// ```rust,no_run
+/// use godot::classes::RefCounted;
+/// use godot_core::task::spawn_async_func;
+/// use godot_core::obj::NewGd;
+///
+/// let mut signal_holder = RefCounted::new_gd();
+/// signal_holder.add_user_signal("finished");
+///
+/// spawn_async_func(signal_holder, async {
+///     // Some async computation
+///     42
+/// });
+/// ```
+///
+/// For void functions:
+/// ```rust,no_run
+/// use godot::classes::RefCounted;
+/// use godot_core::task::spawn_async_func;
+/// use godot_core::obj::NewGd;
+///
+/// let mut signal_holder = RefCounted::new_gd();
+/// signal_holder.add_user_signal("finished");
+///
+/// spawn_async_func(signal_holder, async {
+///     // Some async computation with no return value
+///     println!("Task completed");
+/// });
+/// ```
+pub fn spawn_async_func<F, R>(signal_emitter: Gd<RefCounted>, future: F)
+where
+    F: Future<Output = R> + 'static,
+    R: ToGodot + 'static,
+{
+    // Check if runtime is registered
+    if !is_runtime_registered() {
+        panic!("No async runtime has been registered. Call gdext::task::register_runtime() before using async functions.");
+    }
 
     // Must be called from the main thread since Godot objects are not thread-safe
     if !crate::init::is_main_thread() {

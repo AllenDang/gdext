@@ -247,7 +247,7 @@ impl StringName {
     }
 
     #[doc(hidden)]
-    pub fn as_inner(&self) -> inner::InnerStringName<'_> {
+    pub fn as_inner(&self) -> inner::InnerStringName {
         inner::InnerStringName::from_outer(self)
     }
 

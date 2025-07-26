@@ -5,11 +5,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use super::{bail, error, ident, is_punct, path_is_single, ListParser};
 use crate::ParseResult;
 use proc_macro2::{Delimiter, Ident, Literal, Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::collections::HashMap;
+
+use super::{bail, error, ident, is_punct, path_is_single, ListParser};
 
 pub(crate) type KvMap = HashMap<Ident, Option<KvValue>>;
 
@@ -155,34 +156,19 @@ impl KvParser {
     }
 
     /// Handles an optional key that can occur with arbitrary tokens as the value.
-    ///
-    /// Returns both the key (with the correct span pointing to the attribute) and the value.    
-    /// [KvParser.span](field@KvParser::span) always points to the top of derive macro (`#[derive(GodotClass)]`).
-    pub fn handle_expr_with_key(&mut self, key: &str) -> ParseResult<Option<(Ident, TokenStream)>> {
+    pub fn handle_expr(&mut self, key: &str) -> ParseResult<Option<TokenStream>> {
         match self.map.remove_entry(&ident(key)) {
             None => Ok(None),
             // The `key` that was removed from the map has the correct span.
             Some((key, value)) => match value {
                 None => bail!(key, "expected `{key}` to be followed by `= expression`"),
-                Some(value) => Ok(Some((key, value.expr()?))),
+                Some(value) => Ok(Some(value.expr()?)),
             },
         }
     }
 
-    /// Shortcut for [KvParser::handle_expr_with_key] which returns only the value.
-    pub fn handle_expr(&mut self, key: &str) -> ParseResult<Option<TokenStream>> {
-        match self.handle_expr_with_key(key)? {
-            Some((_key, value)) => Ok(Some(value)),
-            None => Ok(None),
-        }
-    }
-
-    pub fn handle_literal(
-        &mut self,
-        key: &str,
-        expected_type: &str,
-    ) -> ParseResult<Option<Literal>> {
-        let Some((key, expr)) = self.handle_expr_with_key(key)? else {
+    pub fn handle_usize(&mut self, key: &str) -> ParseResult<Option<usize>> {
+        let Some(expr) = self.handle_expr(key)? else {
             return Ok(None);
         };
 
@@ -190,23 +176,16 @@ impl KvParser {
         let Some(TokenTree::Literal(lit)) = tokens.next() else {
             return bail!(
                 key,
-                "missing value for '{key}' (must be {expected_type} literal)"
+                "missing value for '{key}' (must be unsigned integer literal)"
             );
         };
 
         if let Some(surplus) = tokens.next() {
             return bail!(
                 key,
-                "value for '{key}' must be {expected_type} literal; found extra {surplus:?}"
+                "value for '{key}' must be unsigned integer literal; found extra {surplus:?}"
             );
         }
-        Ok(Some(lit))
-    }
-
-    pub fn handle_usize(&mut self, key: &str) -> ParseResult<Option<usize>> {
-        let Some(lit) = self.handle_literal(key, "unsigned integer")? else {
-            return Ok(None);
-        };
 
         let Ok(int) = lit.to_string().parse() else {
             return bail!(
@@ -220,7 +199,7 @@ impl KvParser {
 
     #[allow(dead_code)]
     pub fn handle_bool(&mut self, key: &str) -> ParseResult<Option<bool>> {
-        let Some((key, expr)) = self.handle_expr_with_key(key)? else {
+        let Some(expr) = self.handle_expr(key)? else {
             return Ok(None);
         };
 

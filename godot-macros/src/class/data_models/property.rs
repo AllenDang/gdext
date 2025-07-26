@@ -7,10 +7,8 @@
 
 //! Parses the `#[var]` and `#[export]` attributes on fields.
 
-use crate::class::data_models::fields::Fields;
-use crate::class::data_models::group_export::FieldGroup;
-use crate::class::{Field, FieldVar, GetSet, GetterSetterImpl, UsageFlags};
-use crate::util::{format_funcs_collection_constant, format_funcs_collection_struct, ident};
+use crate::class::{Field, FieldVar, Fields, GetSet, GetterSetterImpl, UsageFlags};
+use crate::util::{format_funcs_collection_constant, format_funcs_collection_struct};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -50,8 +48,6 @@ pub fn make_property_impl(class_name: &Ident, fields: &Fields) -> TokenStream {
             ty: field_type,
             var,
             export,
-            group,
-            subgroup,
             ..
         } = field;
 
@@ -63,17 +59,18 @@ pub fn make_property_impl(class_name: &Ident, fields: &Fields) -> TokenStream {
                 } else {
                     UsageFlags::InferredExport
                 };
-                FieldVar {
+                Some(FieldVar {
                     usage_flags,
                     ..Default::default()
-                }
+                })
             }
 
-            (_, Some(var)) => var.clone(),
-            _ => continue,
+            (_, var) => var.clone(),
         };
 
-        make_groups_registrations(group, subgroup, &mut export_tokens, class_name);
+        let Some(var) = var else {
+            continue;
+        };
 
         let field_name = field_ident.to_string();
 
@@ -222,42 +219,4 @@ fn make_getter_setter(
     let constant = format_funcs_collection_constant(class_name, &gs.function_name);
 
     quote! { #funcs_collection::#constant }
-}
-
-/// Generates registrations for declared group and subgroup and pushes them to export tokens.
-///
-/// Groups must be registered before subgroups (otherwise the ordering is broken).
-fn make_groups_registrations(
-    group: &Option<FieldGroup>,
-    subgroup: &Option<FieldGroup>,
-    export_tokens: &mut Vec<TokenStream>,
-    class_name: &Ident,
-) {
-    export_tokens.push(make_group_registration(
-        group,
-        ident("register_group"),
-        class_name,
-    ));
-    export_tokens.push(make_group_registration(
-        subgroup,
-        ident("register_subgroup"),
-        class_name,
-    ));
-}
-
-fn make_group_registration(
-    group: &Option<FieldGroup>,
-    register_fn: Ident,
-    class_name: &Ident,
-) -> TokenStream {
-    let Some(FieldGroup { name, prefix }) = group else {
-        return TokenStream::new();
-    };
-
-    quote! {
-    ::godot::register::private::#register_fn::<#class_name>(
-            #name,
-            #prefix
-    );
-    }
 }

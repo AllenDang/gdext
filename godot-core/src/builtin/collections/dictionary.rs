@@ -365,7 +365,7 @@ impl Dictionary {
     }
 
     #[doc(hidden)]
-    pub fn as_inner(&self) -> inner::InnerDictionary<'_> {
+    pub fn as_inner(&self) -> inner::InnerDictionary {
         inner::InnerDictionary::from_outer(self)
     }
 

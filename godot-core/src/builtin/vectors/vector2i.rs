@@ -78,7 +78,7 @@ impl Vector2i {
 
     #[doc(hidden)]
     #[inline]
-    pub fn as_inner(&self) -> inner::InnerVector2i<'_> {
+    pub fn as_inner(&self) -> inner::InnerVector2i {
         inner::InnerVector2i::from_outer(self)
     }
 }

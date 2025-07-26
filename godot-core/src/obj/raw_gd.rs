@@ -405,7 +405,7 @@ where
     ///
     /// See [`crate::obj::Gd::bind()`] for a more in depth explanation.
     // Note: possible names: write/read, hold/hold_mut, r/w, r/rw, ...
-    pub(crate) fn bind(&self) -> GdRef<'_, T> {
+    pub(crate) fn bind(&self) -> GdRef<T> {
         self.check_rtti("bind");
         GdRef::from_guard(self.storage().unwrap().get())
     }
@@ -413,7 +413,7 @@ where
     /// Hands out a guard for an exclusive borrow, through which the user instance can be read and written.
     ///
     /// See [`crate::obj::Gd::bind_mut()`] for a more in depth explanation.
-    pub(crate) fn bind_mut(&mut self) -> GdMut<'_, T> {
+    pub(crate) fn bind_mut(&mut self) -> GdMut<T> {
         self.check_rtti("bind_mut");
         GdMut::from_guard(self.storage().unwrap().get_mut())
     }

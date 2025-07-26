@@ -50,9 +50,6 @@ pub mod __prelude_reexport {
 
     pub use super::{EulerOrder, Side, VariantOperator, VariantType};
     pub use crate::{array, real, reals, varray, vdict, vslice};
-
-    #[allow(deprecated)]
-    pub use crate::dict;
 }
 
 pub use __prelude_reexport::*;
