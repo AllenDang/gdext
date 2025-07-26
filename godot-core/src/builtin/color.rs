@@ -350,7 +350,7 @@ impl Color {
             && self.a <= 1.0
     }
 
-    fn as_inner(&self) -> InnerColor {
+    fn as_inner(&self) -> InnerColor<'_> {
         InnerColor::from_outer(self)
     }
 }
@@ -373,7 +373,7 @@ impl ApproxEq for Color {
 }
 
 /// Defines how individual color channels are laid out in memory.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
 pub enum ColorChannelOrder {
     /// RGBA channel order. Godot's default.
     RGBA,

@@ -54,8 +54,7 @@ pub trait Var: GodotConvert {
 // Note: HTML link for #[export] works if this symbol is inside prelude, but not in register::property.
 /// Trait implemented for types that can be used as [`#[export]`](../register/derive.GodotClass.html#properties-and-exports) fields.
 ///
-/// `Export` is only implemented for objects `Gd<T>` if either `T: Inherits<Node>` or `T: Inherits<Resource>`, just like GDScript.
-/// This means you cannot use `#[export]` with `Gd<RefCounted>`, for example.
+/// To export objects, see the [_Exporting_ section of `Gd<T>`](../obj/struct.Gd.html#exporting).
 ///
 /// For enums, this trait can be derived using the [`#[derive(Export)]`](../derive.Export.html) macro.
 #[doc(alias = "property")]
@@ -64,7 +63,8 @@ pub trait Var: GodotConvert {
 #[diagnostic::on_unimplemented(
     message = "`#[var]` properties require `Var` trait; #[export] ones require `Export` trait",
     label = "type cannot be used as a property",
-    note = "see also: https://godot-rust.github.io/book/register/properties.html"
+    note = "see also: https://godot-rust.github.io/book/register/properties.html",
+    note = "`Gd` and `DynGd` cannot be exported directly; wrap them in `Option<...>` or `OnEditor<...>`."
 )]
 pub trait Export: Var {
     /// The export info to use for an exported field of this type, if no other export info is specified.
